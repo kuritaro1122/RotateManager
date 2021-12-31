@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
@@ -48,6 +48,10 @@ namespace RotateManagement {
                     return 0f;
                 } else return Mathf.Clamp01(1f - this.remainTime / this.Time_);
             }
+        }
+        private void InitRemainTime() {
+            if (this.speedBase) this.remainTime = this.rotationDistance / this.duration;
+            else this.remainTime = this.duration;
         }
         [SerializeField] bool active = false;
         [SerializeField] bool finished = false;
@@ -120,6 +124,7 @@ namespace RotateManagement {
         public void StartRotate(float duration, bool speedBase = false, TransitionType transitionType = TransitionType.FixedTimeAndKeep) {
             this.duration = duration;
             this.speedBase = speedBase;
+            InitRemainTime();
             this.transitionType = transitionType;
             this.beginFromRotation = this.Self.rotation;
             this.beginToRotation = this.ToRotation;
