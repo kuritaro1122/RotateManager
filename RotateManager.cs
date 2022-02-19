@@ -13,6 +13,7 @@ namespace RotateManagement {
         [SerializeField] RotateType rotateType = RotateType.Rotation;
         [SerializeField] SimpleRotationGetter simpleRotationGetter = new SimpleRotationGetter();
         [SerializeField] LookAtRotationGetter lookAtRotationGetter = new LookAtRotationGetter();
+        [SerializeField] bool local = false;
         private Quaternion ToRotation {
             get {
                 IRotationGetter rg = null;
@@ -44,7 +45,7 @@ namespace RotateManagement {
         }
         private float T { get {
                 if (this.Time_ == 0f) {
-                    Debug.LogError("RotateManager/time is zero.");
+                    //Debug.LogError("RotateManager/time is zero.");
                     return 0f;
                 } else return Mathf.Clamp01(1f - this.remainTime / this.Time_);
             }
@@ -61,19 +62,32 @@ namespace RotateManagement {
         private void UpdateRotationDistance() {
             Vector3 r0 = this.beginFromRotation.eulerAngles;
             Vector3 r1 = this.beginToRotation.eulerAngles;
-            for (int i = 0; i < 3; i++) {
+            /*for (int i = 0; i < 3; i++) {
                 r0[i] = r0[i] % 360f;
                 r1[i] = r1[i] % 360f;
+            }*/
+            Vector3 dr = r1 - r0;
+            for (int i = 0; i < 3; i++) {
+                float d = dr[i];
+                while (d < -180) {
+                    d += 360f;
+                }
+                while (d >= 180) {
+                    d -= 360f;
+                }
+                dr[i] = d;
             }
-            this.rotationDistance = Vector3.Distance(r0, r1); ;
+            //Debug.Log((r0, r1));
+            //Debug.Log(dr);
+            this.rotationDistance = Vector3.Magnitude(dr); ;
         }
 
         // Update is called once per frame
         void Update() {
-            if (this.active) Rotate();
+            if (this.active) RotateUpdate();
         }
 
-        private void Rotate() {
+        private void RotateUpdate() {
             switch (this.transitionType) {
                 case TransitionType.FixedTime: //一定時間
                     if (this.remainTime < 0f) {
@@ -87,37 +101,56 @@ namespace RotateManagement {
                     SlerpRotate();
                     break;
                 case TransitionType.KeepConstantSpeed: //一定速度で回転し続ける
-                    this.transform.rotation = Quaternion.RotateTowards(this.Self.rotation, this.ToRotation, this.Speed_ * Time.deltaTime);
+                    TowardsRotate();
                     break;
             }
             this.remainTime -= Time.deltaTime;
-            void SlerpRotate() => this.transform.rotation = Quaternion.Slerp(this.beginFromRotation, this.ToRotation, this.T);
+            void SlerpRotate() {
+                Rotate(Quaternion.Slerp(this.beginFromRotation, this.ToRotation, this.T));
+            }
+            void TowardsRotate() {
+                Rotate(Quaternion.RotateTowards(this.Self.rotation, this.ToRotation, this.Speed_ * Time.deltaTime));
+            }
+            void Rotate(Quaternion rotation) {
+                if (this.local) this.transform.localRotation = rotation;
+                else this.transform.rotation = rotation;
+            }
         }
 
         #region SetRotation
-        public RotateManager Set(Quaternion toRotation) {
+        public RotateManager Set(Quaternion toRotation, bool local = false) {
             this.rotateType = RotateType.Rotation;
             this.simpleRotationGetter.Set(toRotation);
+            this.local = local;
+            this.active = false;
             return this;
         }
-        public RotateManager Set(Func<Quaternion> toRotation) {
+        public RotateManager Set(Func<Quaternion> toRotation, bool local = false) {
             this.rotateType = RotateType.Rotation;
             this.simpleRotationGetter.Set(toRotation);
+            this.local = local;
+            this.active = false;
             return this;
         }
         public RotateManager Set(Vector3 target, Func<Vector3> upwards = null, bool lockPitch = false) {
             this.rotateType = RotateType.LookAt;
             this.lookAtRotationGetter.Set(this.transform, target, upwards, lockPitch);
+            this.local = false;
+            this.active = false;
             return this;
         }
         public RotateManager Set(Func<Vector3> target, Func<Vector3> upwards = null, bool lockPitch = false) {
             this.rotateType = RotateType.LookAt;
             this.lookAtRotationGetter.Set(this.transform, target, upwards, lockPitch);
+            this.local = false;
+            this.active = false;
             return this;
         }
         public RotateManager Set(Transform target, Func<Vector3> upwards = null, bool lockPitch = false) {
             this.rotateType = RotateType.LookAt;
             this.lookAtRotationGetter.Set(this.transform, target, upwards, lockPitch);
+            this.local = false;
+            this.active = false;
             return this;
         }
         #endregion
@@ -126,7 +159,7 @@ namespace RotateManagement {
             this.speedBase = speedBase;
             InitRemainTime();
             this.transitionType = transitionType;
-            this.beginFromRotation = this.Self.rotation;
+            this.beginFromRotation = this.local ? this.Self.localRotation : this.Self.rotation;
             this.beginToRotation = this.ToRotation;
             UpdateRotationDistance();
             this.finished = false;
@@ -229,6 +262,7 @@ namespace RotateManagement {
             }
             #endregion
             public Quaternion GetRotation() {
+                //Vector3 _upward = this.upwards != null ? this.upwards() : Vector3.up;
                 Vector3 _upward = this.upwards != null ? this.upwards() : Vector3.up;
                 Vector3 targetPos = this.Target;
                 if (this.lockPitch) {
@@ -238,7 +272,7 @@ namespace RotateManagement {
                 }
                 Vector3 direction = targetPos - self.position;
                 Quaternion rotation = Quaternion.LookRotation(direction, _upward);
-                return rotation; //lockPitch使う
+                return rotation;
             }
         }
     }
