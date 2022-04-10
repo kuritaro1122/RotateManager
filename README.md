@@ -1,6 +1,9 @@
 # RotateManager
 GameObjectの回転を制御する。回転にかかる速度や時間を自由に制御可能。
 
+# Demo
+![gif](/img/demo.gif/)
+
 # Requirement
 * UnityEngine;
 * System;
