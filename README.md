@@ -2,8 +2,8 @@
 GameObjectの回転を制御する。回転にかかる速度や時間を自由に制御可能。
 
 # Demo
-![gif](/img/demo.gif/)
-蝶々の回転制御に使っています。
+![gif](/img/demo.gif/)\
+[HyperNova](https://kuritaro1122.github.io/HyperNova-Web/)の敵や大砲の回転制御に使っています。
 
 # Requirement
 * UnityEngine;
