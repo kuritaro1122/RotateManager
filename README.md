@@ -44,6 +44,7 @@ RotateManager ComponentRotateManager(this GameObject self)
 
 # Note
 * StartRotate()のspeedBaseをtrueにすると処理が重くなるため、falseを推奨します。
+* ターゲットを向かせる時には、upwardsを設定した方が挙動が安定しやすいです。
 
 # License
 "RotateManager" is under [MIT license](https://en.wikipedia.org/wiki/MIT_License).
