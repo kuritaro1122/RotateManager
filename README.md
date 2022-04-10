@@ -3,6 +3,7 @@ GameObjectの回転を制御する。回転にかかる速度や時間を自由�
 
 # Demo
 ![gif](/img/demo.gif/)
+蝶々の回転制御に使っています。
 
 # Requirement
 * UnityEngine;
