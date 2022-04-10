@@ -9,16 +9,24 @@ GameObjectの回転を制御する。回転にかかる速度や時間を自由�
 ① 任意のGameObjectにRotateManagerをコンポーネント\
 ② Set関数で目標の回転を設定\
 ③ StartRotate関数で値を設定して回転開始
+```
+Transform target;
+GameObject self;
+RotateManager manager = self.ComponentRotateManager();
+
+manager.Set(target: target, lockPitch: true)
+    .StartRotate_FixedTime(duration: 1f);
+```
 
 # Contains
 
 ## Public Function
 ```
 RotateManager Set(Quaternion toRotation) // 静的な回転
-RotateManager Set(System.Func toRotation) // 動的な回転
-RotateManager Set(Vector3 target, Func upwards = null, bool lockPitch = false) // ターゲットを向く（静的な座標）
+RotateManager Set(System.Func<Quaternion> toRotation) // 動的な回転
+RotateManager Set(Vector3 target, System.Func<Vector3> upwards = null, bool lockPitch = false) // ターゲットを向く（静的な座標）
 RotateManager Set(System.Func<Vector3> target, System.Func<Vector3> upwards = null, bool lockPitch = false) // ターゲットを向く（動的な座標）
-RotateManager Set(Transform target, Func upwards = null, bool lockPitch = false) // ターゲットを向く（Transform）
+RotateManager Set(Transform target, System.Func<Vector3> upwards = null, bool lockPitch = false) // ターゲットを向く（Transform）
 
 void StartRotate(float duration, bool speedBase = false, TransitionType transitionType = TransitionType.FixedTimeAndKeep)
 void StartRotate_FixedTime(float duration, bool speedBase = false) // 固定時間かけて回転する
