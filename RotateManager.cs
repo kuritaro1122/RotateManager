@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-namespace RotateManagement {
+namespace KuriTaro.RotateManagement {
     [AddComponentMenu("RotateManagement/RotateManager")]
     public class RotateManager : MonoBehaviour {
         private enum RotateType { @Rotation, @LookAt }
         public enum TransitionType { @FixedTime, @FixedTimeAndKeep, @KeepConstantSpeed }
         private Transform Self { get { return this.transform; } }
-        [Header("--- ToRotation ---")]
-        [SerializeField] RotateType rotateType = RotateType.Rotation;
-        [SerializeField] SimpleRotationGetter simpleRotationGetter = new SimpleRotationGetter();
-        [SerializeField] LookAtRotationGetter lookAtRotationGetter = new LookAtRotationGetter();
-        [SerializeField] bool local = false;
+        //[Header("--- ToRotation ---")]
+        private RotateType rotateType = RotateType.Rotation;
+        private SimpleRotationGetter simpleRotationGetter = new SimpleRotationGetter();
+        private LookAtRotationGetter lookAtRotationGetter = new LookAtRotationGetter();
+        private bool local = false;
         private Quaternion ToRotation {
             get {
                 IRotationGetter rg = null;
@@ -28,10 +28,12 @@ namespace RotateManagement {
                 return rg?.GetRotation() ?? Quaternion.identity;
             }
         }
-        [Header("--- Transition ---")]
-        [SerializeField] TransitionType transitionType = TransitionType.FixedTimeAndKeep;
-        [SerializeField] bool speedBase = false;
-        [SerializeField] float duration = 1f;
+        //[Header("--- Transition ---")]
+        private TransitionType transitionType = TransitionType.FixedTimeAndKeep;
+        private bool speedBase = false;
+        private float duration = 1f;
+        private AnimationCurve transitionCurve = AnimationCurve.Linear(0, 0, 1, 1);
+        private AnimationCurve DefaultTransitionCurve => AnimationCurve.Linear(0, 0, 1, 1);
         private float remainTime = 0f;
         private float Speed_ { get {
                 if (this.speedBase) return this.duration;
@@ -45,27 +47,26 @@ namespace RotateManagement {
         }
         private float T { get {
                 if (this.Time_ == 0f) {
-                    //Debug.LogError("RotateManager/time is zero.");
-                    return 0f;
-                } else return Mathf.Clamp01(1f - this.remainTime / this.Time_);
+                    return 1f;
+                } else {
+                    float t = 1f - this.remainTime / this.Time_;
+                    t = this.transitionCurve.Evaluate(t);
+                    return Mathf.Clamp01(t);
+                }
             }
         }
         private void InitRemainTime() {
             if (this.speedBase) this.remainTime = this.rotationDistance / this.duration;
             else this.remainTime = this.duration;
         }
-        [SerializeField] bool active = false;
-        [SerializeField] bool finished = false;
+        private bool active = false;
+        private bool finished = false;
         private Quaternion beginFromRotation = Quaternion.identity;
         private Quaternion beginToRotation = Quaternion.identity;
         private float rotationDistance;
         private void UpdateRotationDistance() {
             Vector3 r0 = this.beginFromRotation.eulerAngles;
             Vector3 r1 = this.beginToRotation.eulerAngles;
-            /*for (int i = 0; i < 3; i++) {
-                r0[i] = r0[i] % 360f;
-                r1[i] = r1[i] % 360f;
-            }*/
             Vector3 dr = r1 - r0;
             for (int i = 0; i < 3; i++) {
                 float d = dr[i];
@@ -77,8 +78,6 @@ namespace RotateManagement {
                 }
                 dr[i] = d;
             }
-            //Debug.Log((r0, r1));
-            //Debug.Log(dr);
             this.rotationDistance = Vector3.Magnitude(dr); ;
         }
 
@@ -119,41 +118,47 @@ namespace RotateManagement {
 
         #region SetRotation
         public RotateManager Set(Quaternion toRotation, bool local = false) {
+            RemoveRotate();
             this.rotateType = RotateType.Rotation;
             this.simpleRotationGetter.Set(toRotation);
             this.local = local;
-            this.active = false;
             return this;
         }
         public RotateManager Set(Func<Quaternion> toRotation, bool local = false) {
+            RemoveRotate();
             this.rotateType = RotateType.Rotation;
             this.simpleRotationGetter.Set(toRotation);
             this.local = local;
-            this.active = false;
             return this;
         }
         public RotateManager Set(Vector3 target, Func<Vector3> upwards = null, bool lockPitch = false) {
+            RemoveRotate();
             this.rotateType = RotateType.LookAt;
             this.lookAtRotationGetter.Set(this.transform, target, upwards, lockPitch);
             this.local = false;
-            this.active = false;
             return this;
         }
         public RotateManager Set(Func<Vector3> target, Func<Vector3> upwards = null, bool lockPitch = false) {
+            RemoveRotate();
             this.rotateType = RotateType.LookAt;
             this.lookAtRotationGetter.Set(this.transform, target, upwards, lockPitch);
             this.local = false;
-            this.active = false;
             return this;
         }
         public RotateManager Set(Transform target, Func<Vector3> upwards = null, bool lockPitch = false) {
+            RemoveRotate();
             this.rotateType = RotateType.LookAt;
             this.lookAtRotationGetter.Set(this.transform, target, upwards, lockPitch);
             this.local = false;
-            this.active = false;
             return this;
         }
         #endregion
+
+        public RotateManager SetTransitionCurve(AnimationCurve curve) {
+            this.transitionCurve = curve;
+            return this;
+        }
+
         public void StartRotate(float duration, bool speedBase = false, TransitionType transitionType = TransitionType.FixedTimeAndKeep) {
             this.duration = duration;
             this.speedBase = speedBase;
@@ -181,21 +186,26 @@ namespace RotateManagement {
         public void StartRotate_FixedTimeAndKeep(float duration, bool speedBase = false) {
             this.StartRotate(duration, speedBase, TransitionType.FixedTimeAndKeep);
         }
-        public void StartRotate_KeepConstansSpeed(float speed) {
+        public void StartRotate_KeepConstantSpeed(float speed) {
             this.StartRotate(speed, true, TransitionType.KeepConstantSpeed);
         }
         public bool GetActive() => this.active;
         public bool GetFinished() => this.finished;
 
+        public void RemoveRotate() {
+            this.active = false;
+            this.finished = false;
+            this.transitionCurve = DefaultTransitionCurve;
+        }
+
         private interface IRotationGetter {
             Quaternion GetRotation();
         }
-        [System.Serializable]
         private class SimpleRotationGetter : IRotationGetter {
             private enum SelectType { @Quaternion, @QuaternionFunc }
-            [SerializeField] SelectType type;
-            [SerializeField] Quaternion quaternion;
-            [SerializeField] Func<Quaternion> quaternionFunc;
+            private SelectType type;
+            private Quaternion quaternion;
+            private Func<Quaternion> quaternionFunc;
             public void Set(Quaternion rotation) {
                 this.type = SelectType.Quaternion;
                 this.quaternion = rotation;
@@ -215,16 +225,15 @@ namespace RotateManagement {
                 }
             }
         }
-        [System.Serializable]
         private class LookAtRotationGetter : IRotationGetter {
             private enum LookType { @Vec3, @Vec3Func, @Transform }
-            [SerializeField] Transform self;
-            [SerializeField] LookType type;
-            [SerializeField] Vector3 vector3 = Vector3.zero;
-            [SerializeField] Func<Vector3> vector3Func = () => Vector3.zero;
-            [SerializeField] Transform transform;
-            [SerializeField] Func<Vector3> upwards;
-            [SerializeField] bool lockPitch = false;//roll pitch yaw
+            private Transform self;
+            private LookType type;
+            private Vector3 vector3 = Vector3.zero;
+            private Func<Vector3> vector3Func = () => Vector3.zero;
+            private Transform transform;
+            private Func<Vector3> upwards;
+            private bool lockPitch = false;//roll pitch yaw
             private Vector3 Target {
                 get {
                     switch (this.type) {
